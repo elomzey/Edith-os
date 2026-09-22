@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:">
+<title>EDITH OS</title>
+<style>
+:root{--bg:#0a0a1a;--surface:#111426;--raised:#181c36;--line:#262c50;--text:#e6e9f5;--muted:#8d94b8;--accent:#4a8df0;--danger:#e0503f;--ok:#2fbf71;--warn:#f0a020}
+[data-theme=light]{--bg:#f3f5fb;--surface:#ffffff;--raised:#e9edf8;--line:#d3daee;--text:#141a33;--muted:#5b6389}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.45;display:flex;flex-direction:column;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header{display:flex;align-items:center;gap:12px;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top))}
+header h1{font-size:17px;font-weight:600;letter-spacing:.02em;flex:1}
+.icon{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:18px;display:grid;place-items:center}
+.icon.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.icon.on{background:var(--danger);border-color:var(--danger);color:#fff}
+
+/* L'orbe : seul élément expressif de l'interface */
+#orbZone{height:26vh;min-height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+#orb{--c:#4a8df0;--glow:#4a8df055;width:88px;height:88px;border-radius:50%;
+  background:radial-gradient(circle at 32% 28%,#ffffffcc 0,var(--c) 30%,#0a1030 100%);
+  box-shadow:0 0 46px var(--glow),inset -9px -12px 24px #0007;
+  animation:breathe 4.2s ease-in-out infinite;transition:box-shadow .4s}
+#orb.listen{--c:#4aa8ff;--glow:#4aa8ffaa;animation-duration:1.3s}
+#orb.think{--c:#f0a020;--glow:#f0a020aa;animation-duration:.9s}
+#orb.speak{--c:#2fbf71;--glow:#2fbf71aa;animation-duration:1.8s}
+#orb.error{--c:#e0503f;--glow:#e0503faa;animation:none}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+#orbLabel{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){#orb{animation:none}}
+
+#roleBar{display:flex;justify-content:center;padding:2px 14px 6px}
+#roleSelect{padding:5px 12px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:13px}
+
+#chat{flex:1;overflow-y:auto;padding:8px 14px 14px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:88%;padding:10px 14px;border-radius:16px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.msg.assistant{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg.system{align-self:center;color:var(--muted);font-size:13px;text-align:center}
+.msg small{display:block;margin-top:6px;font-size:12px;color:var(--warn)}
+.empty{margin:auto;text-align:center;color:var(--muted);max-width:280px}
+
+#bar{display:flex;gap:8px;padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line)}
+#input{flex:1;min-width:0;padding:0 16px;height:44px;border-radius:22px;border:1px solid var(--line);background:var(--bg);font-size:16px}
+
+.panel{position:fixed;inset:0;background:var(--bg);z-index:10;display:none;flex-direction:column}
+.panel.open{display:flex}
+.panel header{border-bottom:1px solid var(--line)}
+#tabs{display:flex;gap:6px;padding:10px 14px;overflow-x:auto;border-bottom:1px solid var(--line)}
+#tabs button{flex:none;padding:8px 14px;border-radius:18px;border:1px solid var(--line);background:none;color:var(--muted)}
+#tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+#tabBody{flex:1;overflow-y:auto;padding:14px;padding-bottom:max(20px,env(safe-area-inset-bottom))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.card h3{font-size:15px;margin-bottom:8px}
+.fg{display:block;margin-bottom:10px;font-size:13px;color:var(--muted)}
+.fg input,.fg select{display:block;width:100%;margin-top:4px;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);font-size:15px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.row.between{justify-content:space-between}
+.btn{padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--raised)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:var(--danger);border-color:var(--danger);background:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.hint{color:var(--muted);font-size:13px;margin-bottom:12px}
+.model{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+.model span{flex:1;overflow-wrap:anywhere}
+.model select{width:auto;margin:0;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--bg)}
+.pick{display:block;width:100%;text-align:left;padding:8px 0;border:0;border-top:1px solid var(--line);background:none;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:6px 4px;text-align:left;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+th{color:var(--muted);font-weight:500}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.switch:first-of-type{border-top:0}
+.switch input{width:22px;height:22px;accent-color:var(--accent)}
+pre{white-space:pre-wrap;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);max-width:90%;background:var(--raised);border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-size:13px;display:none;z-index:30}
+</style>
+</head>
+<body>
+
+<header>
+  <button id="menuBtn" class="icon" aria-label="Ouvrir les réglages">☰</button>
+  <h1>EDITH</h1>
+</header>
+
+<section id="orbZone">
+  <div id="orb" class="idle"></div>
+  <div id="orbLabel">Prête</div>
+</section>
+
+<div id="roleBar">
+  <select id="roleSelect" aria-label="Qui répond">
+    <option value="boss">Patron</option>
+  </select>
+</div>
+
+<main id="chat"></main>
+
+<footer id="bar">
+  <button id="micBtn" class="icon" aria-label="Parler">🎤</button>
+  <input id="input" type="text" placeholder="Écris ou parle…" autocomplete="off" enterkeyhint="send">
+  <button id="sendBtn" class="icon primary" aria-label="Envoyer">➤</button>
+</footer>
+
+<div id="panel" class="panel">
+  <header>
+    <h1>Réglages</h1>
+    <button id="closeBtn" class="icon" aria-label="Fermer">✕</button>
+  </header>
+  <nav id="tabs"></nav>
+  <div id="tabBody"></div>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const pending = {};
+const handlers = {};
+let seq = 0;
+const hasBridge = typeof AndroidBridge !== 'undefined';
+
+/* ---------- Pont Android ---------- */
+window.__edithResult = (id, ok, payload) => {
+  const p = pending[id]; if (!p) return; delete pending[id];
+  if (!ok) return p.rej(new Error(payload));
+  let r; try { r = JSON.parse(payload); } catch (e) { r = { raw: payload }; }
+  if (r && r.error) p.rej(new Error(r.error)); else p.res(r);
+};
+window.__edithEvent = (type, payload) => {
+  let d = {}; try { d = JSON.parse(payload || '{}'); } catch (e) {}
+  if (handlers[type]) handlers[type](d);
+};
+window.__edithBack = () => {
+  if ($('#panel').classList.contains('open')) { closePanel(); return true; }
+  return false;
+};
+function call(action, args) {
+  return new Promise((res, rej) => {
+    if (!hasBridge) return rej(new Error('Ouvre cette page dans l’app EDITH : le pont Android est absent.'));
+    const id = ++seq; pending[id] = { res, rej };
+    AndroidBridge.call(id, action, JSON.stringify(args || {}));
+  });
+}
+
+/* ---------- Outils d'interface ---------- */
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === 'class') e.className = v;
+    else if (k === 'text') e.textContent = v;
+    else if (k === 'value' || k === 'checked' || k.startsWith('on')) e[k] = v;
+    else e.setAttribute(k, v);
+  }
+  for (const c of kids) e.append(c);
+  return e;
+}
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+function setOrb(state, label) { $('#orb').className = state; $('#orbLabel').textContent = label; }
+const idleOrb = () => setOrb('idle', 'Prête');
+
+/* ---------- Conversation ---------- */
+const history = [];
+let settings = { speak_replies: true, lang: 'fr-FR', theme: 'dark' };
+let busy = false, listening = false;
+
+function addMsg(role, text, note) {
+  const empty = $('#chat .empty'); if (empty) empty.remove();
+  const m = el('div', { class: 'msg ' + role, text });
+  if (note) m.append(el('small', { text: note }));
+  $('#chat').append(m);
+  $('#chat').scrollTop = $('#chat').scrollHeight;
+}
+
+async function send(text) {
+  text = text.trim();
+  if (!text || busy) return;
+  busy = true; $('#input').value = '';
+  addMsg('user', text); history.push({ role: 'user', content: text });
+  setOrb('think', 'Je réfléchis…');
+  const role = $('#roleSelect').value;
+  try {
+    const r = role === 'boss'
+      ? await call('chat', { messages: history.slice(-20) })
+      : await call('agent_chat', { role, messages: history.slice(-20) });
+    history.push({ role: 'assistant', content: r.text });
+    addMsg('assistant', r.text, r.degraded ? 'Répondu par ' + r.model + ' (' + r.provider + '), un modèle de remplacement.' : '');
+    if (settings.speak_replies) {
+      call('tts_speak', { text: r.text, lang: settings.lang }).catch(() => {});
+      setOrb('speak', 'Je parle…');
+    } else idleOrb();
+  } catch (e) {
+    history.pop();
+    addMsg('system', e.message); setOrb('error', 'Erreur');
+    setTimeout(idleOrb, 2500);
+  }
+  busy = false;
+}
+
+$('#sendBtn').onclick = () => send($('#input').value);
+$('#input').addEventListener('keydown', e => { if (e.key === 'Enter') send($('#input').value); });
+
+/* ---------- Voix (native) ---------- */
+$('#micBtn').onclick = async () => {
+  if (listening) { call('stt_stop').catch(() => {}); return; }
+  call('tts_stop').catch(() => {});
+  try { await call('stt_start', { lang: settings.lang }); } catch (e) { toast(e.message); }
+};
+handlers.stt_ready = () => { listening = true; $('#micBtn').classList.add('on'); setOrb('listen', 'Je t’écoute…'); };
+handlers.stt_partial = d => { $('#input').value = d.text; };
+handlers.stt_final = d => { listening = false; $('#micBtn').classList.remove('on'); idleOrb(); send(d.text); };
+handlers.stt_error = d => {
+  listening = false; $('#micBtn').classList.remove('on'); idleOrb();
+  if (d.message) toast(d.message);
+  else if (d.code !== 6 && d.code !== 7) toast('Reconnaissance vocale : erreur ' + d.code);
+};
+handlers.tts_start = () => setOrb('speak', 'Je parle…');
+handlers.tts_done = () => { if (!busy && !listening) idleOrb(); };
+handlers.permission = d => {
+  const granted = Object.values(d).some(Boolean);
+  toast(granted ? 'Permission accordée.' : 'Permission refusée.');
+};
+
+/* ---------- Panneau de réglages ---------- */
+const TABS = [['apis', 'APIs'], ['agents', 'Agence'], ['tasks', 'Tâches'], ['usage', 'Consommation'], ['phone', 'Téléphone'], ['prefs', 'Réglages']];
+let currentTab = 'apis';
+function openPanel() { $('#panel').classList.add('open'); showTab(currentTab); }
+function closePanel() { $('#panel').classList.remove('open'); }
+$('#menuBtn').onclick = openPanel;
+$('#closeBtn').onclick = () => { closePanel(); loadRoles(); };
+
+async function loadRoles() {
+  const sel = $('#roleSelect');
+  const previous = sel.value;
+  sel.replaceChildren(el('option', { value: 'boss', text: 'Patron' }));
+  try {
+    const list = (await call('agents_get')).agents;
+    list.filter(a => a.id !== 'boss' && a.enabled && a.model_id).forEach(a => sel.append(el('option', { value: a.id, text: a.label })));
+  } catch (e) { /* pas grave : le patron reste utilisable */ }
+  if ([...sel.options].some(o => o.value === previous)) sel.value = previous;
+}
+
+async function showTab(name) {
+  currentTab = name;
+  const tabs = $('#tabs'); tabs.replaceChildren();
+  TABS.forEach(([k, label]) => tabs.append(el('button', { class: k === name ? 'on' : '', text: label, onclick: () => showTab(k) })));
+  const body = $('#tabBody'); body.replaceChildren();
+  try { await ({ apis: tabApis, agents: tabAgents, tasks: tabTasks, usage: tabUsage, phone: tabPhone, prefs: tabPrefs })[name](body); }
+  catch (e) { body.append(el('p', { class: 'hint', text: e.message })); }
+}
+
+/* --- Onglet APIs --- */
+let providers = [];
+const PRESETS = [
+  ['Groq', 'https://api.groq.com/openai/v1'],
+  ['OpenRouter', 'https://openrouter.ai/api/v1'],
+  ['Mistral', 'https://api.mistral.ai/v1'],
+  ['Together', 'https://api.together.xyz/v1'],
+  ['DeepSeek', 'https://api.deepseek.com/v1'],
+  ['Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai'],
+  ['Autre', '']
+];
+async function reloadProviders() { providers = (await call('get_providers')).providers || []; }
+async function saveProviders() { await call('save_providers', { providers }); await reloadProviders(); }
+
+async function tabApis(body) {
+  await reloadProviders();
+  body.append(el('p', { class: 'hint', text: 'Ajoute toute API compatible OpenAI : URL de base et clé. Les clés sont chiffrées sur le téléphone. Un même modèle proposé par plusieurs APIs bascule automatiquement quand l’une est épuisée.' }));
+  const list = el('div');
+  const chips = el('div', { class: 'chips' });
+  PRESETS.forEach(([n, u]) => chips.append(el('button', { class: 'btn', text: 'Ajouter ' + n, onclick: () => {
+    providers.push({ id: 'p' + Date.now().toString(36), name: n, base_url: u, api_key: '', enabled: true, models: [] });
+    renderProviders(list);
+  } })));
+  body.append(chips, list);
+  renderProviders(list);
+}
+
+function renderProviders(list) {
+  list.replaceChildren();
+  if (!providers.length) list.append(el('p', { class: 'hint', text: 'Aucune API pour l’instant. Choisis un fournisseur ci-dessus pour commencer.' }));
+  providers.forEach((p, i) => {
+    const field = (label, key, type) => el('label', { class: 'fg' }, label,
+      el('input', { type: type || 'text', value: p[key] || '', autocomplete: 'off', oninput: ev => { p[key] = ev.target.value; } }));
+    const modelsBox = el('div');
+    const finder = el('div');
+    const drawModels = () => {
+      modelsBox.replaceChildren();
+      (p.models || []).forEach((m, mi) => modelsBox.append(el('div', { class: 'model' },
+        el('span', { text: m.id }),
+        el('select', { onchange: ev => { m.tier = ev.target.value; } },
+          el('option', { value: 'main', text: 'Titulaire' }), el('option', { value: 'backup', text: 'Secours' })),
+        el('button', { class: 'btn', text: '✕', 'aria-label': 'Retirer ' + m.id, onclick: () => { p.models.splice(mi, 1); drawModels(); } }))));
+      [...modelsBox.querySelectorAll('select')].forEach((s, k) => { s.value = p.models[k].tier || 'main'; });
+    };
+    drawModels();
+    const findBtn = el('button', { class: 'btn', text: 'Chercher les modèles', onclick: async () => {
+      try {
+        await saveProviders();
+        const cur = providers.find(x => x.id === p.id);
+        const r = await call('list_models', { provider_id: p.id });
+        finder.replaceChildren();
+        const filter = el('input', { type: 'search', placeholder: 'Filtrer (' + r.models.length + ' modèles)…' });
+        const results = el('div');
+        const draw = () => {
+          results.replaceChildren();
+          r.models.filter(m => m.id.toLowerCase().includes(filter.value.toLowerCase())).slice(0, 40).forEach(m =>
+            results.append(el('button', { class: 'pick', text: m.id + '   (' + m.caps.join(', ') + ', à vérifier)', onclick: () => {
+              if (!(cur.models || []).some(x => x.id === m.id)) { cur.models = cur.models || []; cur.models.push({ id: m.id, tier: 'main', enabled: true }); }
+              p.models = cur.models; drawModels(); toast(m.id + ' ajouté. Pense à enregistrer.');
+            } })));
+        };
+        filter.oninput = draw; draw();
+        finder.append(el('label', { class: 'fg' }, 'Modèles disponibles', filter), results);
+      } catch (e) { toast(e.message); }
+    } });
+    list.append(el('div', { class: 'card' },
+      field('Nom', 'name'), field('URL de base', 'base_url', 'url'), field('Clé API', 'api_key', 'password'),
+      el('div', { class: 'switch' }, 'Activée', el('input', { type: 'checkbox', checked: p.enabled !== false, onchange: ev => { p.enabled = ev.target.checked; } })),
+      el('h3', { text: 'Modèles utilisés' }), modelsBox, finder,
+      el('div', { class: 'row' }, findBtn,
+        el('button', { class: 'btn primary', text: 'Enregistrer', onclick: async () => { try { await saveProviders(); toast('Enregistré.'); renderProviders(list); } catch (e) { toast(e.message); } } }),
+        el('button', { class: 'btn danger', text: 'Supprimer', onclick: async () => { providers.splice(i, 1); try { await saveProviders(); } catch (e) { toast(e.message); } renderProviders(list); } }))));
+  });
+}
+
+/* --- Onglet Agence --- */
+let agentsCache = [];
+async function tabAgents(body) {
+  body.append(el('p', { class: 'hint', text: 'Un rôle = une tâche précise, avec son propre modèle. Le patron gère la conversation générale ; choisis un autre agent juste au-dessus du clavier pour lui parler directement.' }));
+  const box = el('div');
+  body.append(el('button', { class: 'btn primary', text: 'Configurer automatiquement', onclick: async () => {
+    try { agentsCache = (await call('agents_autoconfigure')).agents; drawAgents(box); toast('Proposition faite à partir des modèles disponibles : vérifie puis enregistre.'); }
+    catch (e) { toast(e.message); }
+  } }), box);
+  try { agentsCache = (await call('agents_get')).agents; } catch (e) { box.append(el('p', { class: 'hint', text: e.message })); return; }
+  drawAgents(box);
+}
+
+async function drawAgents(box) {
+  box.replaceChildren();
+  let providers = [];
+  try { providers = await call('get_providers'); } catch (e) {}
+  const options = [];
+  providers.forEach(p => (p.models || []).forEach(m => options.push({ provider_id: p.id, model_id: m.id, label: p.name + ' / ' + m.id })));
+  agentsCache.forEach(a => {
+    const sel = el('select', {});
+    sel.append(el('option', { value: '', text: '— aucun —' }));
+    options.forEach(o => sel.append(el('option', { value: o.provider_id + '|' + o.model_id, text: o.label })));
+    sel.value = a.provider_id ? a.provider_id + '|' + a.model_id : '';
+    sel.onchange = () => { const [pid, mid] = sel.value.split('|'); a.provider_id = pid || ''; a.model_id = mid || ''; };
+    box.append(el('div', { class: 'card' },
+      el('div', { class: 'switch' }, a.label,
+        el('input', { type: 'checkbox', checked: a.enabled !== false, onchange: ev => { a.enabled = ev.target.checked; } })),
+      el('label', { class: 'fg' }, 'Modèle assigné', sel)));
+  });
+  box.append(el('button', { class: 'btn primary', text: 'Enregistrer l’agence', onclick: async () => {
+    try { agentsCache = (await call('agents_save', { agents: agentsCache })).agents; toast('Agence enregistrée.'); await loadRoles(); }
+    catch (e) { toast(e.message); }
+  } }));
+}
+
+/* --- Onglet Tâches --- */
+const pad = n => String(n).padStart(2, '0');
+const ACTION_DEFS = {
+  battery: { label: 'Lire la batterie', fields: [] },
+  wifi: { label: 'Lire l’état du Wi-Fi', fields: [] },
+  location: { label: 'Lire la position', fields: [] },
+  torch_on: { label: 'Allumer la torche', real: 'torch', args: { on: true }, fields: [] },
+  torch_off: { label: 'Éteindre la torche', real: 'torch', args: { on: false }, fields: [] },
+  volume: { label: 'Régler le volume', fields: [['level', 'Niveau (0 à 100)', 'number']] },
+  sms: { label: 'Envoyer un SMS', fields: [['number', 'Numéro', 'tel'], ['message', 'Message', 'text']] },
+  launch_app: { label: 'Lancer une application', fields: [['name', 'Nom de l’app', 'text']] },
+  open_url: { label: 'Ouvrir un lien', fields: [['url', 'URL (https://…)', 'url']] },
+  tap: { label: 'Toucher l’écran', fields: [['x', 'X', 'number'], ['y', 'Y', 'number']] },
+  swipe: { label: 'Balayer l’écran', fields: [['x1', 'X départ', 'number'], ['y1', 'Y départ', 'number'], ['x2', 'X arrivée', 'number'], ['y2', 'Y arrivée', 'number']] },
+  back: { label: 'Bouton retour', real: 'global_action', args: { name: 'back' }, fields: [] },
+  home: { label: 'Bouton accueil', real: 'global_action', args: { name: 'home' }, fields: [] },
+  read_screen: { label: 'Lire l’écran', fields: [] },
+};
+function stepToArgs(kind, values) {
+  const def = ACTION_DEFS[kind] || ACTION_DEFS.battery;
+  const args = Object.assign({}, def.args || {});
+  (def.fields || []).forEach(([key, , type]) => { args[key] = type === 'number' ? Number(values[key] || 0) : (values[key] || ''); });
+  return { action: def.real || kind, args };
+}
+
+async function tabTasks(body) {
+  let alarm = { granted: true };
+  try { alarm = await call('exact_alarm_status'); } catch (e) {}
+  if (!alarm.granted) {
+    body.append(el('div', { class: 'card' },
+      el('p', { class: 'hint', text: 'Les alarmes précises ne sont pas autorisées : les tâches risquent d’être en retard.' }),
+      el('button', { class: 'btn', text: 'Autoriser les alarmes précises', onclick: () => call('open_exact_alarm_settings').catch(e => toast(e.message)) })));
+  }
+  body.append(el('button', { class: 'btn primary', text: '+ Nouvelle tâche', onclick: () => openTaskForm() }));
+  const list = el('div');
+  body.append(list);
+  let tasks = [];
+  try { tasks = await call('list_tasks'); } catch (e) { list.append(el('p', { class: 'hint', text: e.message })); return; }
+  if (!tasks.length) { list.append(el('p', { class: 'hint', text: 'Aucune tâche planifiée pour l’instant.' })); return; }
+  tasks.forEach(t => {
+    const sched = t.schedule.type === 'daily'
+      ? 'Tous les jours à ' + pad(t.schedule.hour) + ':' + pad(t.schedule.minute)
+      : 'Le ' + t.schedule.date + ' à ' + pad(t.schedule.hour) + ':' + pad(t.schedule.minute);
+    const last = !t.last_run ? 'Jamais exécutée'
+      : t.last_run.status === 'ok' ? 'Dernière exécution réussie' : 'Échec à la dernière exécution';
+    list.append(el('div', { class: 'card' },
+      el('div', { class: 'row between' },
+        el('h3', { text: t.title }),
+        el('input', { type: 'checkbox', checked: t.enabled !== false, 'aria-label': 'Activée', onchange: async ev => {
+          try { await call('save_task', Object.assign({}, t, { enabled: ev.target.checked })); toast('Enregistré.'); }
+          catch (e) { toast(e.message); ev.target.checked = !ev.target.checked; }
+        } })),
+      el('p', { class: 'hint', text: sched + ' — ' + t.steps.length + ' étape(s) — ' + last }),
+      el('div', { class: 'row' },
+        el('button', { class: 'btn', text: 'Modifier', onclick: () => openTaskForm(t) }),
+        el('button', { class: 'btn danger', text: 'Supprimer', onclick: async () => {
+          try { await call('delete_task', { id: t.id }); showTab('tasks'); } catch (e) { toast(e.message); }
+        } }))));
+  });
+}
+
+function openTaskForm(existing) {
+  const title = el('input', { type: 'text', placeholder: 'Nom de la tâche', value: existing ? existing.title : '' });
+  const type = el('select', {}, el('option', { value: 'daily', text: 'Tous les jours' }), el('option', { value: 'once', text: 'Une seule fois' }));
+  type.value = existing ? existing.schedule.type : 'daily';
+  const time = el('input', { type: 'time', value: existing ? pad(existing.schedule.hour) + ':' + pad(existing.schedule.minute) : '03:00' });
+  const date = el('input', { type: 'date', value: (existing && existing.schedule.date) || '' });
+  const dateWrap = el('label', { class: 'fg' }, 'Date', date);
+  dateWrap.style.display = type.value === 'once' ? 'block' : 'none';
+  type.onchange = () => { dateWrap.style.display = type.value === 'once' ? 'block' : 'none'; };
+
+  const stepsState = existing
+    ? existing.steps.map(s => ({ kind: s.kind || s.action, values: s.args || {}, verify: (s.verify && s.verify.contains) || '', onFail: s.on_fail || 'stop' }))
+    : [{ kind: 'battery', values: {}, verify: '', onFail: 'stop' }];
+  const stepsBox = el('div');
+  function drawSteps() {
+    stepsBox.replaceChildren();
+    stepsState.forEach((st, i) => {
+      const kindSel = el('select', { onchange: ev => { st.kind = ev.target.value; st.values = {}; drawSteps(); } });
+      Object.entries(ACTION_DEFS).forEach(([k, d]) => kindSel.append(el('option', { value: k, text: d.label })));
+      kindSel.value = st.kind;
+      const fieldsBox = el('div');
+      (ACTION_DEFS[st.kind].fields || []).forEach(([key, label, type2]) => {
+        fieldsBox.append(el('label', { class: 'fg' }, label,
+          el('input', { type: type2, value: st.values[key] || '', oninput: ev => { st.values[key] = ev.target.value; } })));
+      });
+      const verifyInp = el('input', { type: 'text', placeholder: '(optionnel) texte attendu à l’écran ensuite', value: st.verify, oninput: ev => { st.verify = ev.target.value; } });
+      const failSel = el('select', { onchange: ev => { st.onFail = ev.target.value; } },
+        el('option', { value: 'stop', text: 'Arrêter la tâche' }), el('option', { value: 'continue', text: 'Continuer quand même' }));
+      failSel.value = st.onFail;
+      stepsBox.append(el('div', { class: 'card' },
+        el('div', { class: 'row between' }, el('b', { text: 'Étape ' + (i + 1) }),
+          el('button', { class: 'btn danger', text: '✕', 'aria-label': 'Retirer cette étape', onclick: () => { stepsState.splice(i, 1); drawSteps(); } })),
+        el('label', { class: 'fg' }, 'Action', kindSel), fieldsBox,
+        el('label', { class: 'fg' }, 'Si l’écran doit ensuite afficher', verifyInp),
+        el('label', { class: 'fg' }, 'En cas d’échec de cette étape', failSel)));
+    });
+  }
+  drawSteps();
+
+  const saveBtn = el('button', { class: 'btn primary', text: 'Enregistrer', onclick: async () => {
+    if (!title.value.trim()) return toast('Donne un nom à la tâche.');
+    if (!stepsState.length) return toast('Ajoute au moins une étape.');
+    const [h, m] = time.value.split(':').map(Number);
+    const schedule = { type: type.value, hour: h, minute: m };
+    if (type.value === 'once') {
+      if (!date.value) return toast('Choisis une date.');
+      schedule.date = date.value;
+    }
+    const steps = stepsState.map(st => {
+      const built = stepToArgs(st.kind, st.values);
+      const step = { kind: st.kind, action: built.action, args: built.args, on_fail: st.onFail };
+      if (st.verify) step.verify = { contains: st.verify };
+      return step;
+    });
+    const payload = { title: title.value.trim(), schedule, steps, enabled: true };
+    if (existing) payload.id = existing.id;
+    try { await call('save_task', payload); toast('Tâche enregistrée.'); showTab('tasks'); }
+    catch (e) { toast(e.message); }
+  } });
+
+  $('#tabBody').replaceChildren(el('div', { class: 'card' },
+    el('h3', { text: existing ? 'Modifier la tâche' : 'Nouvelle tâche' }),
+    el('label', { class: 'fg' }, 'Nom', title),
+    el('label', { class: 'fg' }, 'Fréquence', type), dateWrap,
+    el('label', { class: 'fg' }, 'Heure', time),
+    el('h3', { text: 'Étapes' }), stepsBox,
+    el('button', { class: 'btn', text: '+ Étape', onclick: () => { stepsState.push({ kind: 'battery', values: {}, verify: '', onFail: 'stop' }); drawSteps(); } }),
+    el('div', { class: 'row' }, saveBtn, el('button', { class: 'btn', text: 'Annuler', onclick: () => showTab('tasks') }))));
+}
+
+/* --- Onglet Consommation --- */
+async function tabUsage(body) {
+  const s = await call('usage');
+  const names = {}; try { (await call('get_providers')).providers.forEach(p => { names[p.id] = p.name; }); } catch (e) {}
+  const nm = id => names[id] || id;
+  body.append(el('h3', { text: 'Tokens consommés' }));
+  if (!s.usage.length) body.append(el('p', { class: 'hint', text: 'Rien pour l’instant. Les compteurs se remplissent à chaque réponse.' }));
+  else {
+    const t = el('table', {}, el('tr', {}, el('th', { text: 'API / modèle' }), el('th', { text: 'Requêtes' }), el('th', { text: 'Tokens' }), el('th', { text: 'Aujourd’hui' })));
+    s.usage.forEach(u => t.append(el('tr', {}, el('td', { text: nm(u.provider) + ' / ' + u.model }), el('td', { text: String(u.requests) }), el('td', { text: String(u.prompt_tokens + u.completion_tokens) }), el('td', { text: String(u.today_tokens) }))));
+    body.append(t);
+  }
+  if (s.quota.length) {
+    body.append(el('h3', { text: 'Quotas annoncés par les APIs' }));
+    s.quota.forEach(q => body.append(el('p', { class: 'hint', text: nm(q.provider) + ' / ' + q.model + ' : ' + (q.remaining_tokens ?? '?') + ' tokens restants' + (q.reset ? ', remise à zéro dans ' + q.reset : '') })));
+  }
+  body.append(el('h3', { text: 'Journal des bascules et pauses' }));
+  body.append(el('pre', { text: s.events.length ? s.events.map(e => new Date(e.ts * 1000).toLocaleTimeString() + '  ' + e.kind + '  ' + e.detail).join('\n') : 'Aucun événement.' }));
+}
+
+/* --- Onglet Téléphone --- */
+async function tabPhone(body) {
+  const run = (label, fn) => el('button', { class: 'btn', text: label, onclick: async () => {
+    try { const r = await fn(); toast(typeof r === 'string' ? r : JSON.stringify(r)); } catch (e) { toast(e.message); } } });
+  const vol = el('input', { type: 'range', min: 0, max: 100, value: 50, 'aria-label': 'Volume' });
+  vol.onchange = () => call('volume', { level: +vol.value }).catch(e => toast(e.message));
+  body.append(el('div', { class: 'card' }, el('h3', { text: 'Tester les actions' }),
+    el('div', { class: 'row' },
+      run('Batterie', async () => { const b = await call('battery'); return b.percent + ' %' + (b.charging ? ' (en charge)' : ''); }),
+      run('Wi-Fi', async () => { const w = await call('wifi'); return w.enabled ? 'Wi-Fi activé' : 'Wi-Fi coupé'; }),
+      run('Panneau Wi-Fi', () => call('wifi_panel')),
+      run('Position', async () => { const l = await call('location'); return l.available ? l.lat.toFixed(4) + ', ' + l.lon.toFixed(4) : 'Position indisponible'; }),
+      run('Torche on', () => call('torch', { on: true })), run('Torche off', () => call('torch', { on: false }))),
+    el('label', { class: 'fg' }, 'Volume média', vol)));
+
+  const status = el('p', { class: 'hint', text: '…' });
+  call('accessibility_status').then(r => { status.textContent = r.enabled ? 'Accessibilité : activée.' : 'Accessibilité : désactivée.'; }).catch(() => {});
+  body.append(el('div', { class: 'card' }, el('h3', { text: 'Contrôle de l’écran' }), status,
+    el('p', { class: 'hint', text: 'Sur Android 13 et plus, une app installée à la main est bloquée : ouvre « Infos de l’app », menu ⋮, « Autoriser les paramètres restreints », puis active EDITH dans l’accessibilité.' }),
+    el('div', { class: 'row' },
+      run('Infos de l’app', () => call('open_app_settings')),
+      run('Accessibilité', () => call('open_accessibility_settings')),
+      run('Lire l’écran', async () => (await call('read_screen')).text.slice(0, 300) || 'Écran vide'))));
+
+  const perms = el('div', { class: 'row' });
+  [['sms', 'SMS'], ['location', 'Position'], ['mic', 'Micro'], ['notifications', 'Notifications']].forEach(([k, l]) =>
+    perms.append(run('Autoriser ' + l, () => call('request_permission', { name: k }).then(() => 'Demande envoyée'))));
+  body.append(el('div', { class: 'card' }, el('h3', { text: 'Permissions Android' }), perms));
+
+  const pol = await call('get_policies');
+  const names = { sms: 'Envoyer un SMS', tap: 'Toucher l’écran', swipe: 'Balayer l’écran', global_action: 'Retour, accueil, récents', read_screen: 'Lire l’écran' };
+  const card = el('div', { class: 'card' }, el('h3', { text: 'Niveau de vérification' }),
+    el('p', { class: 'hint', text: 'Assouplir un niveau demande toujours ta confirmation à l’écran, l’IA ne peut pas le faire seule.' }));
+  Object.entries(pol).forEach(([a, level]) => {
+    const sel = el('select', { onchange: async ev => {
+      try { await call('set_policy', { action: a, level: ev.target.value }); toast('Enregistré.'); }
+      catch (e) { toast(e.message); ev.target.value = level; } } },
+      el('option', { value: 'auto', text: 'Sans demander' }), el('option', { value: 'confirm', text: 'Confirmer' }), el('option', { value: 'blocked', text: 'Bloqué' }));
+    sel.value = level;
+    card.append(el('label', { class: 'fg' }, names[a] || a, sel));
+  });
+  body.append(card);
+}
+
+/* --- Onglet Réglages --- */
+async function tabPrefs(body) {
+  settings = await call('get_settings'); applyTheme();
+  const sw = (label, key) => el('label', { class: 'switch' }, label,
+    el('input', { type: 'checkbox', checked: !!settings[key], onchange: async ev => {
+      try { settings = await call('set_setting', { key, value: ev.target.checked }); } catch (e) { toast(e.message); ev.target.checked = !ev.target.checked; } } }));
+  body.append(el('div', { class: 'card' },
+    sw('Lire les réponses à voix haute', 'speak_replies'),
+    sw('Rester active en arrière-plan', 'keep_alive'),
+    sw('Démarrer avec le téléphone', 'start_on_boot')));
+  body.append(el('div', { class: 'card' }, el('h3', { text: 'Confidentialité avant envoi aux APIs' }),
+    sw('Masquer les numéros de carte', 'mask_cards'),
+    sw('Masquer les e-mails', 'mask_emails'),
+    sw('Masquer les numéros de téléphone', 'mask_phones')));
+  const theme = el('select', { onchange: async ev => { settings = await call('set_setting', { key: 'theme', value: ev.target.value }); applyTheme(); } },
+    el('option', { value: 'dark', text: 'Sombre' }), el('option', { value: 'light', text: 'Clair' }));
+  theme.value = settings.theme;
+  body.append(el('div', { class: 'card' }, el('label', { class: 'fg' }, 'Thème', theme),
+    el('button', { class: 'btn danger', text: 'Effacer la mémoire des conversations', onclick: async () => {
+      try { await call('memory_clear'); history.length = 0; $('#chat').replaceChildren(); showEmpty(); toast('Mémoire effacée.'); } catch (e) { toast(e.message); } } })));
+}
+function applyTheme() { document.documentElement.dataset.theme = settings.theme || 'dark'; }
+
+/* ---------- Démarrage ---------- */
+function showEmpty() {
+  $('#chat').append(el('div', { class: 'empty', text: 'Écris ou appuie sur le micro. Pour commencer, ajoute une API dans ☰ > APIs.' }));
+}
+(async function init() {
+  showEmpty();
+  if (!hasBridge) return;
+  try { settings = await call('get_settings'); applyTheme(); } catch (e) {}
+  loadRoles();
+  try {
+    const m = await call('memory_get', { limit: 30 });
+    if (m.messages.length) {
+      $('#chat').replaceChildren();
+      m.messages.forEach(x => { history.push(x); addMsg(x.role, x.content); });
+    }
+  } catch (e) { addMsg('system', 'Python démarre encore… ' + e.message); }
+})();
+</script>
+</body>
+</html>
