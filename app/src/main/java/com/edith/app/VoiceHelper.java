@@ -18,7 +18,7 @@ import org.json.JSONObject;
 /** Voix native : SpeechRecognizer + TextToSpeech (WebSpeech est peu fiable dans un WebView). */
 final class VoiceHelper {
     private final MainActivity act;
-    private final TextToSpeech tts;
+    private TextToSpeech tts;
     private boolean ttsReady = false;
     private SpeechRecognizer recognizer;
 
